@@ -1,229 +1,142 @@
-"""
-Flow Manager Core
-
-This module contains the core flow management logic including the FlowManager class,
-TaskFactory, and ConditionEvaluator that orchestrate task execution.
-"""
-
-import asyncio
-import json
 import uuid
-from typing import Dict, Any, Optional, Type
+import asyncio
+from typing import Dict, Any, Optional
 from datetime import datetime
-
-from models import (
-    BaseTask, TaskResult, TaskStatus, FlowStatus, 
-    TaskConfig, ConditionConfig, FlowConfig, FlowExecutionState
-)
-from tasks import FetchDataTask, ProcessDataTask, StoreDataTask
+from enum import Enum
 
 
-class TaskFactory:
-    """Factory to create task instances based on configuration"""
-
-    _task_registry: Dict[str, Type[BaseTask]] = {
-        'fetch_data': FetchDataTask,
-        'process_data': ProcessDataTask,
-        'store_data': StoreDataTask,
-    }
-
-    @classmethod
-    def register_task(cls, task_type: str, task_class: Type[BaseTask]):
-        """Register a new task type"""
-        cls._task_registry[task_type] = task_class
-
-    @classmethod
-    def create_task(cls, config: TaskConfig) -> BaseTask:
-        """Create a task instance from configuration"""
-        task_class = cls._task_registry.get(config.task_type)
-        if not task_class:
-            raise ValueError(f"Unknown task type: {config.task_type}")
-        return task_class(config)
-
-    @classmethod
-    def get_registered_tasks(cls) -> Dict[str, Type[BaseTask]]:
-        """Get all registered task types"""
-        return cls._task_registry.copy()
+class TaskStatus(Enum):
+    SUCCESS = "SUCCESS"
+    FAILURE = "FAILURE"
+    SKIPPED = "SKIPPED"
 
 
-class ConditionEvaluator:
-    """Evaluates conditions to determine flow control"""
+class FlowStatus(Enum):
+    CREATED = "CREATED"
+    RUNNING = "RUNNING"
+    COMPLETED = "COMPLETED"
+    FAILED = "FAILED"
 
-    def evaluate_condition(self, condition: ConditionConfig, task_result: TaskResult) -> str:
-        """
-        Evaluate a condition based on task result
-        Returns the next task name or 'end'
-        """
-        if condition.outcome == "success":
-            if task_result.status == TaskStatus.SUCCESS:
-                return condition.target_task_success
-            else:
-                return condition.target_task_failure
-        elif condition.outcome == "failure":
-            if task_result.status == TaskStatus.FAILURE:
-                return condition.target_task_success
-            else:
-                return condition.target_task_failure
 
-        # Default behavior if condition doesn't match
-        return condition.target_task_failure if task_result.status == TaskStatus.FAILURE else condition.target_task_success
+class TaskResult:
+    def __init__(self, task_name: str):
+        self.task_name = task_name
+        self.status = None  # TaskStatus enum
+        self.message = ""
+        self.data = {}
+        self.execution_time = None
+        self.timestamp = None
+        self.error = None
+
+
+class FlowExecutionState:
+    def __init__(self, flow_id: str, flow_name: str):
+        self.flow_id = flow_id
+        self.flow_name = flow_name
+        self.status = FlowStatus.CREATED
+        self.current_task = None
+        self.completed_tasks = []
+        self.started_at = None
+        self.ended_at = None
+        self.task_results: Dict[str, TaskResult] = {}
 
 
 class FlowManager:
-    """Main Flow Manager that orchestrates task execution"""
-
     def __init__(self):
-        self.task_factory = TaskFactory()
-        self.condition_evaluator = ConditionEvaluator()
-        self.active_flows: Dict[str, FlowExecutionState] = {}
+        self.flows: Dict[str, FlowExecutionState] = {}
+        self.flow_configs: Dict[str, Dict[str, Any]] = {}
 
-    def load_flow_config(self, config_dict: Dict[str, Any]) -> FlowConfig:
-        """Load flow configuration from dictionary"""
-        flow_data = config_dict.get('flow', {})
+    def load_flow_config(self, config: Dict[str, Any]):
+        # Validate minimal required fields (expand as needed)
+        if "id" not in config or "name" not in config or "tasks" not in config:
+            raise ValueError("Flow config missing required 'id', 'name' or 'tasks'")
+        return config  # In real code, parse/validate with Pydantic or similar
 
-        # Parse tasks
-        tasks = []
-        for task_data in flow_data.get('tasks', []):
-            task_config = TaskConfig(
-                name=task_data['name'],
-                description=task_data['description'],
-                task_type=task_data.get('task_type', task_data['name'].replace(' ', '_').lower()),
-                parameters=task_data.get('parameters', {})
-            )
-            tasks.append(task_config)
-
-        # Parse conditions
-        conditions = []
-        for condition_data in flow_data.get('conditions', []):
-            condition_config = ConditionConfig(
-                name=condition_data['name'],
-                description=condition_data['description'],
-                source_task=condition_data['source_task'],
-                outcome=condition_data['outcome'],
-                target_task_success=condition_data['target_task_success'],
-                target_task_failure=condition_data['target_task_failure']
-            )
-            conditions.append(condition_config)
-
-        return FlowConfig(
-            id=flow_data['id'],
-            name=flow_data['name'],
-            start_task=flow_data['start_task'],
-            tasks=tasks,
-            conditions=conditions
-        )
-
-    def create_flow_execution(self, flow_config: FlowConfig) -> str:
-        """Create a new flow execution instance"""
+    def create_flow_execution(self, flow_config: Dict[str, Any]) -> str:
         execution_id = str(uuid.uuid4())
+        flow_id = flow_config["id"]
+        flow_name = flow_config.get("name", "UnnamedFlow")
 
-        execution_state = FlowExecutionState(
-            flow_id=execution_id,
-            flow_name=flow_config.name,
-            status=FlowStatus.CREATED
-        )
+        # Save config so it can be used during execution
+        self.flow_configs[execution_id] = flow_config
 
-        self.active_flows[execution_id] = execution_state
+        # Initialize execution state
+        state = FlowExecutionState(flow_id=execution_id, flow_name=flow_name)
+        self.flows[execution_id] = state
         return execution_id
 
-    async def execute_flow(self, execution_id: str, flow_config: FlowConfig) -> FlowExecutionState:
-        """Execute a flow and return the final state"""
-
-        if execution_id not in self.active_flows:
-            raise ValueError(f"Flow execution {execution_id} not found")
-
-        execution_state = self.active_flows[execution_id]
-        execution_state.status = FlowStatus.RUNNING
-        execution_state.started_at = datetime.now()
-
-        try:
-            # Start with the first task
-            current_task_name = flow_config.start_task
-            context = {'previous_results': {}}
-
-            while current_task_name and current_task_name != "end":
-                execution_state.current_task = current_task_name
-
-                # Get task configuration
-                task_config = flow_config.get_task_by_name(current_task_name)
-                if not task_config:
-                    execution_state.status = FlowStatus.FAILURE
-                    raise ValueError(f"Task '{current_task_name}' not found in flow configuration")
-
-                # Create and execute task
-                task = self.task_factory.create_task(task_config)
-                task_result = await task.execute(context)
-
-                # Store task result
-                execution_state.task_results[current_task_name] = task_result
-                execution_state.completed_tasks.append(current_task_name)
-                context['previous_results'][current_task_name] = task_result
-
-                # Evaluate condition to determine next step
-                condition = flow_config.get_condition_for_task(current_task_name)
-                if condition:
-                    next_task = self.condition_evaluator.evaluate_condition(condition, task_result)
-                    current_task_name = next_task
-                else:
-                    # No condition defined, end the flow
-                    break
-
-                # If task failed and condition says to end, break the loop
-                if current_task_name == "end":
-                    break
-
-            # Determine final flow status
-            execution_state.current_task = None
-            execution_state.ended_at = datetime.now()
-
-            # Check if all tasks completed successfully
-            all_successful = all(
-                result.status == TaskStatus.SUCCESS 
-                for result in execution_state.task_results.values()
-            )
-
-            if all_successful:
-                execution_state.status = FlowStatus.SUCCESS
-            else:
-                # Check if any task failed
-                any_failed = any(
-                    result.status == TaskStatus.FAILURE 
-                    for result in execution_state.task_results.values()
-                )
-                execution_state.status = FlowStatus.FAILURE if any_failed else FlowStatus.ENDED
-
-        except Exception as e:
-            execution_state.status = FlowStatus.FAILURE
-            execution_state.ended_at = datetime.now()
-            execution_state.current_task = None
-            # In a real implementation, you'd use proper logging
-            print(f"Flow execution failed: {str(e)}")
-
-        return execution_state
-
     def get_flow_status(self, execution_id: str) -> Optional[FlowExecutionState]:
-        """Get current status of a flow execution"""
-        return self.active_flows.get(execution_id)
+        return self.flows.get(execution_id)
 
-    def get_all_flows(self) -> Dict[str, FlowExecutionState]:
-        """Get all active flows"""
-        return self.active_flows.copy()
+    def get_flow_config(self, execution_id: str) -> Optional[Dict[str, Any]]:
+        return self.flow_configs.get(execution_id)
 
     def remove_flow(self, execution_id: str) -> bool:
-        """Remove a flow execution from memory"""
-        if execution_id in self.active_flows:
-            del self.active_flows[execution_id]
-            return True
-        return False
+        existed = False
+        if execution_id in self.flows:
+            del self.flows[execution_id]
+            existed = True
+        if execution_id in self.flow_configs:
+            del self.flow_configs[execution_id]
+            existed = True
+        return existed
+
+    def get_all_flows(self) -> Dict[str, FlowExecutionState]:
+        return self.flows
 
     def get_flow_summary(self) -> Dict[str, Any]:
-        """Get summary statistics of all flows"""
-        flows = self.active_flows.values()
+        counts = {status.value: 0 for status in FlowStatus}
+        for f in self.flows.values():
+            counts[f.status.value] += 1
         return {
-            "total_flows": len(flows),
-            "status_counts": {
-                status.value: sum(1 for f in flows if f.status == status)
-                for status in FlowStatus
-            },
-            "registered_task_types": list(self.task_factory.get_registered_tasks().keys())
+            "total_flows": len(self.flows),
+            "status_counts": counts,
+            "registered_task_types": []  # Add logic if needed
         }
+
+    async def execute_flow(self, execution_id: str, flow_config: Dict[str, Any]) -> FlowExecutionState:
+        if execution_id not in self.flows:
+            raise ValueError("Execution ID not found")
+
+        state = self.flows[execution_id]
+        state.status = FlowStatus.RUNNING
+        state.started_at = datetime.utcnow()
+        tasks = flow_config["tasks"]
+
+        # Simplified sequential execution simulation
+        for task in tasks:
+            task_name = task["name"]
+            state.current_task = task_name
+
+            # Create and add a TaskResult
+            task_result = TaskResult(task_name=task_name)
+            try:
+                # Simulate task execution delay
+                await asyncio.sleep(0.5)
+
+                # Simulate success/failure based on failure_rate param
+                failure_rate = task.get("parameters", {}).get("failure_rate", 0)
+                import random
+                if random.random() < failure_rate:
+                    raise RuntimeError(f"Simulated failure in {task_name}")
+
+                task_result.status = TaskStatus.SUCCESS
+                task_result.message = "Completed successfully"
+                task_result.data = {"info": f"Result of {task_name}"}
+            except Exception as e:
+                task_result.status = TaskStatus.FAILURE
+                task_result.error = str(e)
+                state.status = FlowStatus.FAILED
+                state.task_results[task_name] = task_result
+                state.ended_at = datetime.utcnow()
+                return state
+
+            # Save result
+            task_result.timestamp = datetime.utcnow()
+            state.task_results[task_name] = task_result
+            state.completed_tasks.append(task_name)
+
+        state.status = FlowStatus.COMPLETED
+        state.current_task = None
+        state.ended_at = datetime.utcnow()
+        return state
