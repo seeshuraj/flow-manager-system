@@ -136,11 +136,13 @@ async def health_check():
 async def create_flow(flow_config: FlowConfig):
     """
     Create a new flow from JSON configuration.
-    The flow configuration is expected as the request body directly.
+    Wraps flow_config dict under 'flow' key to match load_flow_config expectation.
     """
     try:
-        flow_config_obj = flow_manager.load_flow_config(flow_config.dict())
-        execution_id = flow_manager.create_flow_execution(flow_config_obj)
+        # Wrap Pydantic model dict under 'flow' key
+        flow_obj = flow_manager.load_flow_config({"flow": flow_config.dict()})
+
+        execution_id = flow_manager.create_flow_execution(flow_obj)
 
         return {
             "execution_id": execution_id,
@@ -148,7 +150,6 @@ async def create_flow(flow_config: FlowConfig):
             "status": "created",
             "message": "Flow created successfully"
         }
-
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Failed to create flow: {str(e)}")
 
