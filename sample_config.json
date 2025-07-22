@@ -1,0 +1,55 @@
+{
+  "flow": {
+    "id": "flow123",
+    "name": "Data processing flow",
+    "start_task": "task1",
+    "tasks": [
+      {
+        "name": "task1",
+        "description": "Fetch data",
+        "task_type": "fetch_data",
+        "parameters": {
+          "data_source": "external_api",
+          "failure_rate": 0.1
+        }
+      },
+      {
+        "name": "task2",
+        "description": "Process data",
+        "task_type": "process_data",
+        "parameters": {
+          "method": "advanced_processing",
+          "failure_rate": 0.05
+        }
+      },
+      {
+        "name": "task3",
+        "description": "Store data",
+        "task_type": "store_data",
+        "parameters": {
+          "storage_path": "/data/processed/",
+          "format": "json",
+          "failure_rate": 0.02
+        }
+      }
+    ],
+    "conditions": [
+      {
+        "name": "condition_task1_result",
+        "description": "Evaluate the result of task1. If successful, proceed to task2; otherwise, end the flow.",
+        "source_task": "task1",
+        "outcome": "success",
+        "target_task_success": "task2",
+        "target_task_failure": "end"
+      },
+      {
+        "name": "condition_task2_result",
+        "description": "Evaluate the result of task2. If successful, proceed to task3; otherwise, end the flow.",
+        "source_task": "task2",
+        "outcome": "success",
+        "target_task_success": "task3",
+        "target_task_failure": "end"
+      }
+    ]
+  }
+}
