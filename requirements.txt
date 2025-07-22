@@ -1,0 +1,16 @@
+# Flow Manager Microservice Dependencies
+
+# Web Framework
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+
+# Data validation and serialization  
+pydantic==2.5.0
+
+# Testing (optional)
+pytest==7.4.3
+pytest-asyncio==0.21.1
+httpx==0.25.2
+
+# Additional utilities
+python-multipart==0.0.6
