@@ -6,7 +6,6 @@ including flow creation, execution, and result validation.
 """
 
 import asyncio
-import json
 import sys
 import os
 
@@ -26,57 +25,55 @@ async def test_flow_manager():
     flow_manager = FlowManager()
     print("✓ Flow Manager initialized")
 
-    # Load sample configuration
+    # Load sample configuration (corrected: no "flow" wrapper)
     sample_config = {
-        "flow": {
-            "id": "test_flow",
-            "name": "Test Data Processing Flow",
-            "start_task": "task1",
-            "tasks": [
-                {
-                    "name": "task1",
-                    "description": "Fetch data",
-                    "task_type": "fetch_data",
-                    "parameters": {"failure_rate": 0.0}  # Ensure success for test
-                },
-                {
-                    "name": "task2",
-                    "description": "Process data",
-                    "task_type": "process_data",
-                    "parameters": {"failure_rate": 0.0}  # Ensure success for test
-                },
-                {
-                    "name": "task3",
-                    "description": "Store data",
-                    "task_type": "store_data",
-                    "parameters": {"failure_rate": 0.0}  # Ensure success for test
-                }
-            ],
-            "conditions": [
-                {
-                    "name": "condition_task1_result",
-                    "description": "Evaluate task1 result",
-                    "source_task": "task1",
-                    "outcome": "success",
-                    "target_task_success": "task2",
-                    "target_task_failure": "end"
-                },
-                {
-                    "name": "condition_task2_result",
-                    "description": "Evaluate task2 result",
-                    "source_task": "task2",
-                    "outcome": "success",
-                    "target_task_success": "task3",
-                    "target_task_failure": "end"
-                }
-            ]
-        }
+        "id": "test_flow",
+        "name": "Test Data Processing Flow",
+        "start_task": "task1",
+        "tasks": [
+            {
+                "name": "task1",
+                "description": "Fetch data",
+                "task_type": "fetch_data",
+                "parameters": {"failure_rate": 0.0}  # Ensure success for test
+            },
+            {
+                "name": "task2",
+                "description": "Process data",
+                "task_type": "process_data",
+                "parameters": {"failure_rate": 0.0}  # Ensure success for test
+            },
+            {
+                "name": "task3",
+                "description": "Store data",
+                "task_type": "store_data",
+                "parameters": {"failure_rate": 0.0}  # Ensure success for test
+            }
+        ],
+        "conditions": [
+            {
+                "name": "condition_task1_result",
+                "description": "Evaluate task1 result",
+                "source_task": "task1",
+                "outcome": "success",
+                "target_task_success": "task2",
+                "target_task_failure": "end"
+            },
+            {
+                "name": "condition_task2_result",
+                "description": "Evaluate task2 result",
+                "source_task": "task2",
+                "outcome": "success",
+                "target_task_success": "task3",
+                "target_task_failure": "end"
+            }
+        ]
     }
 
     try:
         # Load flow configuration
         flow_config = flow_manager.load_flow_config(sample_config)
-        print(f"✓ Flow configuration loaded: {flow_config.name}")
+        print(f"✓ Flow configuration loaded: {flow_config['name']}")
 
         # Create flow execution
         execution_id = flow_manager.create_flow_execution(flow_config)
@@ -99,7 +96,7 @@ async def test_flow_manager():
             print(f"  {task_name}:")
             print(f"    Status: {result.status.value}")
             print(f"    Message: {result.message}")
-            print(f"    Execution Time: {result.execution_time:.2f}s")
+            print(f"    Execution Time: {result.execution_time or 0:.2f}s")
             if result.error:
                 print(f"    Error: {result.error}")
 
@@ -132,36 +129,34 @@ async def test_flow_with_failure():
 
     flow_manager = FlowManager()
 
-    # Configuration with high failure rate for task2
+    # Corrected failure config: no "flow" wrapper
     failure_config = {
-        "flow": {
-            "id": "failure_test_flow",
-            "name": "Failure Test Flow",
-            "start_task": "task1",
-            "tasks": [
-                {"name": "task1", "description": "Fetch data", "task_type": "fetch_data", "parameters": {"failure_rate": 0.0}},
-                {"name": "task2", "description": "Process data", "task_type": "process_data", "parameters": {"failure_rate": 1.0}},  # Force failure
-                {"name": "task3", "description": "Store data", "task_type": "store_data", "parameters": {"failure_rate": 0.0}}
-            ],
-            "conditions": [
-                {
-                    "name": "condition_task1_result",
-                    "description": "Evaluate task1 result",
-                    "source_task": "task1",
-                    "outcome": "success",
-                    "target_task_success": "task2",
-                    "target_task_failure": "end"
-                },
-                {
-                    "name": "condition_task2_result",
-                    "description": "Evaluate task2 result",
-                    "source_task": "task2",
-                    "outcome": "success",
-                    "target_task_success": "task3",
-                    "target_task_failure": "end"
-                }
-            ]
-        }
+        "id": "failure_test_flow",
+        "name": "Failure Test Flow",
+        "start_task": "task1",
+        "tasks": [
+            {"name": "task1", "description": "Fetch data", "task_type": "fetch_data", "parameters": {"failure_rate": 0.0}},
+            {"name": "task2", "description": "Process data", "task_type": "process_data", "parameters": {"failure_rate": 1.0}},  # Force failure
+            {"name": "task3", "description": "Store data", "task_type": "store_data", "parameters": {"failure_rate": 0.0}}
+        ],
+        "conditions": [
+            {
+                "name": "condition_task1_result",
+                "description": "Evaluate task1 result",
+                "source_task": "task1",
+                "outcome": "success",
+                "target_task_success": "task2",
+                "target_task_failure": "end"
+            },
+            {
+                "name": "condition_task2_result",
+                "description": "Evaluate task2 result",
+                "source_task": "task2",
+                "outcome": "success",
+                "target_task_success": "task3",
+                "target_task_failure": "end"
+            }
+        ]
     }
 
     try:
