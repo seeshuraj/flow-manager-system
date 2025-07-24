@@ -21,70 +21,35 @@ async def test_flow_manager():
 
     print("=== Flow Manager Test ===\n")
 
-    # Initialize flow manager
     flow_manager = FlowManager()
     print("✓ Flow Manager initialized")
 
-    # Load sample configuration (corrected: no "flow" wrapper)
     sample_config = {
         "id": "test_flow",
         "name": "Test Data Processing Flow",
         "start_task": "task1",
         "tasks": [
-            {
-                "name": "task1",
-                "description": "Fetch data",
-                "task_type": "fetch_data",
-                "parameters": {"failure_rate": 0.0}  # Ensure success for test
-            },
-            {
-                "name": "task2",
-                "description": "Process data",
-                "task_type": "process_data",
-                "parameters": {"failure_rate": 0.0}  # Ensure success for test
-            },
-            {
-                "name": "task3",
-                "description": "Store data",
-                "task_type": "store_data",
-                "parameters": {"failure_rate": 0.0}  # Ensure success for test
-            }
+            {"name": "task1", "description": "Fetch data", "task_type": "fetch_data", "parameters": {"failure_rate": 0.0}},
+            {"name": "task2", "description": "Process data", "task_type": "process_data", "parameters": {"failure_rate": 0.0}},
+            {"name": "task3", "description": "Store data", "task_type": "store_data", "parameters": {"failure_rate": 0.0}}
         ],
         "conditions": [
-            {
-                "name": "condition_task1_result",
-                "description": "Evaluate task1 result",
-                "source_task": "task1",
-                "outcome": "success",
-                "target_task_success": "task2",
-                "target_task_failure": "end"
-            },
-            {
-                "name": "condition_task2_result",
-                "description": "Evaluate task2 result",
-                "source_task": "task2",
-                "outcome": "success",
-                "target_task_success": "task3",
-                "target_task_failure": "end"
-            }
+            {"name": "condition_task1_result", "description": "Evaluate task1 result", "source_task": "task1", "outcome": "success", "target_task_success": "task2", "target_task_failure": "end"},
+            {"name": "condition_task2_result", "description": "Evaluate task2 result", "source_task": "task2", "outcome": "success", "target_task_success": "task3", "target_task_failure": "end"}
         ]
     }
 
     try:
-        # Load flow configuration
         flow_config = flow_manager.load_flow_config(sample_config)
         print(f"✓ Flow configuration loaded: {flow_config['name']}")
 
-        # Create flow execution
         execution_id = flow_manager.create_flow_execution(flow_config)
         print(f"✓ Flow execution created: {execution_id}")
 
-        # Execute the flow
         print("\n--- Executing Flow ---")
         execution_state = await flow_manager.execute_flow(execution_id, flow_config)
 
-        # Print results
-        print(f"\n--- Flow Execution Results ---")
+        print("\n--- Flow Execution Results ---")
         print(f"Flow Status: {execution_state.status.value}")
         print(f"Completed Tasks: {execution_state.completed_tasks}")
 
@@ -100,7 +65,6 @@ async def test_flow_manager():
             if result.error:
                 print(f"    Error: {result.error}")
 
-        # Validate results
         expected_tasks = ["task1", "task2", "task3"]
         actual_tasks = execution_state.completed_tasks
 
@@ -110,7 +74,7 @@ async def test_flow_manager():
             print(f"\n❌ Task execution mismatch. Expected: {expected_tasks}, Got: {actual_tasks}")
             return False
 
-        if execution_state.status == FlowStatus.SUCCESS:
+        if execution_state.status == FlowStatus.COMPLETED:
             print("✅ Flow completed successfully")
             return True
         else:
@@ -129,33 +93,20 @@ async def test_flow_with_failure():
 
     flow_manager = FlowManager()
 
-    # Corrected failure config: no "flow" wrapper
     failure_config = {
         "id": "failure_test_flow",
         "name": "Failure Test Flow",
         "start_task": "task1",
         "tasks": [
             {"name": "task1", "description": "Fetch data", "task_type": "fetch_data", "parameters": {"failure_rate": 0.0}},
-            {"name": "task2", "description": "Process data", "task_type": "process_data", "parameters": {"failure_rate": 1.0}},  # Force failure
+            {"name": "task2", "description": "Process data", "task_type": "process_data", "parameters": {"failure_rate": 1.0}},
             {"name": "task3", "description": "Store data", "task_type": "store_data", "parameters": {"failure_rate": 0.0}}
         ],
         "conditions": [
-            {
-                "name": "condition_task1_result",
-                "description": "Evaluate task1 result",
-                "source_task": "task1",
-                "outcome": "success",
-                "target_task_success": "task2",
-                "target_task_failure": "end"
-            },
-            {
-                "name": "condition_task2_result",
-                "description": "Evaluate task2 result",
-                "source_task": "task2",
-                "outcome": "success",
-                "target_task_success": "task3",
-                "target_task_failure": "end"
-            }
+            {"name": "condition_task1_result", "description": "Evaluate task1 result", "source_task": "task1",
+             "outcome": "success", "target_task_success": "task2", "target_task_failure": "end"},
+            {"name": "condition_task2_result", "description": "Evaluate task2 result", "source_task": "task2",
+             "outcome": "success", "target_task_success": "task3", "target_task_failure": "end"}
         ]
     }
 
@@ -169,8 +120,7 @@ async def test_flow_with_failure():
         print(f"Flow Status: {execution_state.status.value}")
         print(f"Completed Tasks: {execution_state.completed_tasks}")
 
-        # Should have completed task1 and task2, but not task3
-        if len(execution_state.completed_tasks) == 2 and execution_state.status == FlowStatus.FAILURE:
+        if len(execution_state.completed_tasks) == 1 and execution_state.status == FlowStatus.FAILED:
             print("✅ Flow correctly stopped after task failure")
             return True
         else:
@@ -190,7 +140,6 @@ async def test_api_integration():
     try:
         import httpx
 
-        # Test health endpoint
         async with httpx.AsyncClient() as client:
             response = await client.get("http://localhost:8000/health")
             if response.status_code == 200:
@@ -206,7 +155,7 @@ async def test_api_integration():
     except Exception as e:
         print(f"⚠️  API server not running or accessible: {str(e)}")
         print("    Start the API with: python api.py")
-        return True  # Don't fail the test if API server is not running
+        return True  # Skip test if server down
 
 
 async def main():
@@ -232,7 +181,6 @@ async def main():
             print(f"❌ {test_name} crashed: {str(e)}")
             results.append((test_name, False))
 
-    # Print summary
     print(f"\n{'='*50}")
     print("TEST SUMMARY")
     print('='*50)
