@@ -15,10 +15,8 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from models import TaskStatus, FlowStatus
 from flow_manager import FlowManager
 
-
 async def test_flow_manager():
     """Test the flow manager functionality"""
-
     print("=== Flow Manager Test ===\n")
 
     flow_manager = FlowManager()
@@ -31,12 +29,26 @@ async def test_flow_manager():
         "tasks": [
             {"name": "task1", "description": "Fetch data", "task_type": "fetch_data", "parameters": {"failure_rate": 0.0}},
             {"name": "task2", "description": "Process data", "task_type": "process_data", "parameters": {"failure_rate": 0.0}},
-            {"name": "task3", "description": "Store data", "task_type": "store_data", "parameters": {"failure_rate": 0.0}}
+            {"name": "task3", "description": "Store data", "task_type": "store_data", "parameters": {"failure_rate": 0.0}},
         ],
         "conditions": [
-            {"name": "condition_task1_result", "description": "Evaluate task1 result", "source_task": "task1", "outcome": "success", "target_task_success": "task2", "target_task_failure": "end"},
-            {"name": "condition_task2_result", "description": "Evaluate task2 result", "source_task": "task2", "outcome": "success", "target_task_success": "task3", "target_task_failure": "end"}
-        ]
+            {
+                "name": "condition_task1_result",
+                "description": "Evaluate task1 result",
+                "source_task": "task1",
+                "outcome": "success",
+                "target_task_success": "task2",
+                "target_task_failure": "end",
+            },
+            {
+                "name": "condition_task2_result",
+                "description": "Evaluate task2 result",
+                "source_task": "task2",
+                "outcome": "success",
+                "target_task_success": "task3",
+                "target_task_failure": "end",
+            },
+        ],
     }
 
     try:
@@ -50,7 +62,7 @@ async def test_flow_manager():
         execution_state = await flow_manager.execute_flow(execution_id, flow_config)
 
         print("\n--- Flow Execution Results ---")
-        print(f"Flow Status: {execution_state.status.value}")
+        print(f"Flow Status: {execution_state.status} (type: {type(execution_state.status)})")
         print(f"Completed Tasks: {execution_state.completed_tasks}")
 
         execution_time = execution_state.ended_at - execution_state.started_at
@@ -59,7 +71,7 @@ async def test_flow_manager():
         print("\n--- Task Results ---")
         for task_name, result in execution_state.task_results.items():
             print(f"  {task_name}:")
-            print(f"    Status: {result.status.value}")
+            print(f"    Status: {result.status} (type: {type(result.status)})")
             print(f"    Message: {result.message}")
             print(f"    Execution Time: {result.execution_time or 0:.2f}s")
             if result.error:
@@ -74,21 +86,23 @@ async def test_flow_manager():
             print(f"\n❌ Task execution mismatch. Expected: {expected_tasks}, Got: {actual_tasks}")
             return False
 
-        if execution_state.status == FlowStatus.COMPLETED:
+        # Compare enum value for accurate status check
+        status_value = execution_state.status.value.upper()
+        print(f"DEBUG: Flow status value for comparison: {status_value}")
+
+        if status_value == "COMPLETED":
             print("✅ Flow completed successfully")
             return True
         else:
-            print(f"❌ Flow failed with status: {execution_state.status.value}")
+            print(f"✗ Test failed: Flow status was {execution_state.status}")
             return False
 
     except Exception as e:
         print(f"✗ Test failed: {str(e)}")
         return False
 
-
 async def test_flow_with_failure():
     """Test flow behavior when a task fails"""
-
     print("\n=== Testing Flow with Failure ===\n")
 
     flow_manager = FlowManager()
@@ -100,14 +114,26 @@ async def test_flow_with_failure():
         "tasks": [
             {"name": "task1", "description": "Fetch data", "task_type": "fetch_data", "parameters": {"failure_rate": 0.0}},
             {"name": "task2", "description": "Process data", "task_type": "process_data", "parameters": {"failure_rate": 1.0}},
-            {"name": "task3", "description": "Store data", "task_type": "store_data", "parameters": {"failure_rate": 0.0}}
+            {"name": "task3", "description": "Store data", "task_type": "store_data", "parameters": {"failure_rate": 0.0}},
         ],
         "conditions": [
-            {"name": "condition_task1_result", "description": "Evaluate task1 result", "source_task": "task1",
-             "outcome": "success", "target_task_success": "task2", "target_task_failure": "end"},
-            {"name": "condition_task2_result", "description": "Evaluate task2 result", "source_task": "task2",
-             "outcome": "success", "target_task_success": "task3", "target_task_failure": "end"}
-        ]
+            {
+                "name": "condition_task1_result",
+                "description": "Evaluate task1 result",
+                "source_task": "task1",
+                "outcome": "success",
+                "target_task_success": "task2",
+                "target_task_failure": "end",
+            },
+            {
+                "name": "condition_task2_result",
+                "description": "Evaluate task2 result",
+                "source_task": "task2",
+                "outcome": "success",
+                "target_task_success": "task3",
+                "target_task_failure": "end",
+            },
+        ],
     }
 
     try:
@@ -117,26 +143,26 @@ async def test_flow_with_failure():
         print("Executing flow with forced failure in task2...")
         execution_state = await flow_manager.execute_flow(execution_id, flow_config)
 
-        print(f"Flow Status: {execution_state.status.value}")
+        print(f"Flow Status: {execution_state.status} (type: {type(execution_state.status)})")
         print(f"Completed Tasks: {execution_state.completed_tasks}")
 
-        if len(execution_state.completed_tasks) == 1 and execution_state.status == FlowStatus.FAILED:
+        status_value = execution_state.status.value.upper()
+        print(f"DEBUG: Flow status value for comparison: {status_value}")
+
+        if len(execution_state.completed_tasks) == 1 and status_value == "FAILED":
             print("✅ Flow correctly stopped after task failure")
             return True
         else:
-            print("❌ Flow did not handle failure correctly")
+            print("✗ Failure test failed: Flow did not handle failure correctly")
             return False
 
     except Exception as e:
         print(f"✗ Failure test failed: {str(e)}")
         return False
 
-
 async def test_api_integration():
     """Test API integration (requires running API server)"""
-
     print("\n=== Testing API Integration ===\n")
-
     try:
         import httpx
 
@@ -157,7 +183,6 @@ async def test_api_integration():
         print("    Start the API with: python api.py")
         return True  # Skip test if server down
 
-
 async def main():
     """Run all tests"""
     print("🧪 Running Flow Manager Tests\n")
@@ -165,32 +190,31 @@ async def main():
     tests = [
         ("Core Flow Manager", test_flow_manager()),
         ("Flow with Failure", test_flow_with_failure()),
-        ("API Integration", test_api_integration())
+        ("API Integration", test_api_integration()),
     ]
 
     results = []
+
     for test_name, test_coro in tests:
         print(f"\n{'='*50}")
         print(f"Running: {test_name}")
-        print('='*50)
+        print("="*50)
 
         try:
             result = await test_coro
             results.append((test_name, result))
         except Exception as e:
-            print(f"❌ {test_name} crashed: {str(e)}")
+            print(f"❌ {test_name} crashed: {e}")
             results.append((test_name, False))
 
     print(f"\n{'='*50}")
     print("TEST SUMMARY")
-    print('='*50)
+    print("="*50)
 
-    passed = 0
-    for test_name, result in results:
-        status = "✅ PASSED" if result else "❌ FAILED"
+    passed = sum(1 for _, res in results if res)
+    for test_name, success in results:
+        status = "✅ PASSED" if success else "❌ FAILED"
         print(f"{test_name}: {status}")
-        if result:
-            passed += 1
 
     print(f"\nOverall: {passed}/{len(results)} tests passed")
 
@@ -200,7 +224,6 @@ async def main():
     else:
         print("\n❌ Some tests failed!")
         return False
-
 
 if __name__ == "__main__":
     result = asyncio.run(main())
