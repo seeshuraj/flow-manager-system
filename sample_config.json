@@ -1,5 +1,4 @@
 {
-  "flow": {
     "id": "flow123",
     "name": "Data processing flow",
     "start_task": "task1",
@@ -51,5 +50,4 @@
         "target_task_failure": "end"
       }
     ]
-  }
 }
