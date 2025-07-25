@@ -302,20 +302,3 @@ The system includes three example tasks:
 
 Each task can be configured with parameters like failure rates for testing different scenarios.
 
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Implement changes with tests
-4. Submit a pull request
-
-## 📞 Support
-
-For questions and support:
-- Review the comprehensive test examples
-- Check the API documentation at `/docs`
-- Examine the sample configuration in `sample_config.json`
-
----
-
-This implementation provides a complete, production-ready flow manager system that can be easily extended and customized for various use cases.
