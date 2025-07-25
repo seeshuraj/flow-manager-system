@@ -1,304 +1,136 @@
-# Python Backend Flow Manager System
+# Flow Manager System
 
-A microservice for managing sequential task execution with conditional flow control, built with FastAPI and Python.
+A powerful backend system to define, execute, and monitor task flows with conditional logic. Built using Python and FastAPI, this microservice enables flexible orchestration of sequential and dependent tasks via a REST API.
 
-## 🚀 Features
+---
 
-- **Sequential Task Execution**: Tasks execute one after another in a controlled manner
-- **Conditional Flow Control**: Dynamic flow routing based on task success/failure
-- **Generic Architecture**: Support for any number of tasks and conditions
-- **RESTful API**: Complete microservice with FastAPI
-- **Real-time Monitoring**: Track flow execution status and task results
-- **Error Handling**: Comprehensive error management and recovery
-- **Async Processing**: Non-blocking task execution with asyncio
-- **Extensible Design**: Easy to add new task types
+## Overview
 
-## 📋 Project Structure
+The Flow Manager allows you to design workflows consisting of multiple tasks and conditional paths. Each flow can be created, executed asynchronously, and tracked for real-time status updates.
 
-```
-flow_manager/
-├── models.py              # Data models and enums
-├── tasks.py              # Task implementations  
-├── flow_manager.py       # Core flow management logic
-├── api.py               # FastAPI microservice
-├── test_flow_manager.py # Test scripts
-├── requirements.txt     # Dependencies
-├── sample_config.json   # Example flow configuration
-└── README.md           # This file
-```
+Key features include:
 
-## 🏗️ Architecture Overview
+- Create and configure task flows with conditions.
+- Execute flows and monitor individual task statuses.
+- REST API endpoints to manage flow lifecycle.
+- Background execution with task result aggregation.
+- Error handling and failure propagation.
+- Automated tests for core functionality and API integration.
+- Dockerized for easy deployment and development.
 
-The Flow Manager system consists of several key components:
+---
 
-### Core Components
-
-1. **Flow Manager Core**: Orchestrates the entire flow execution process
-2. **Task Registry**: Factory pattern for creating and managing task instances  
-3. **Condition Evaluator**: Evaluates task results against defined conditions
-4. **State Manager**: Tracks flow execution state and task results
-5. **API Layer**: FastAPI-based REST endpoints
-6. **Configuration Loader**: Parses JSON flow configurations
-
-### Design Patterns Used
-
-- **Factory Pattern**: Task creation and instantiation
-- **Strategy Pattern**: Different task implementations
-- **Chain of Responsibility**: Sequential task execution
-- **State Pattern**: Flow state management
-
-## 💻 Installation
+## Getting Started
 
 ### Prerequisites
 
-- Python 3.8+
-- pip package manager
+- Python 3.10+
+- `pip` (Python package manager)
+- Optional: Docker (for containerized deployment)
 
-### Install Dependencies
+### Installation
 
-```bash
-pip install -r requirements.txt
+1. Clone the repository:
+
+    ```
+    git clone https://github.com/seeshuraj/flow-manager-system.git
+    cd flow-manager-system
+    ```
+
+2. (Optional) Create and activate a virtual environment:
+
+    ```
+    python3 -m venv venv
+    source venv/bin/activate
+    ```
+
+3. Install dependencies:
+
+    ```
+    pip install -r requirements.txt
+    ```
+
+### Running the API Server
+
+Start the FastAPI server locally using Uvicorn:
+```
+uvicorn api:app --reload
 ```
 
-## 🚦 Quick Start
+The server will be available at `http://localhost:8000`.
 
-### 1. Start the Microservice
+You can visit `http://localhost:8000/docs` to explore the interactive API documentation and test endpoints directly.
 
-```bash
-python api.py
+### Running Tests
+
+Tests use `asyncio` to run flow manager functionality and API integration checks.
+
+Run the tests with:
+```
+python3 test_flow_manager.py
 ```
 
-The API will be available at `http://localhost:8000`
+Make sure the API server is running (see above) before running tests to allow API integration tests to pass.
 
-### 2. View API Documentation
+---
 
-- Swagger UI: `http://localhost:8000/docs`
-- ReDoc: `http://localhost:8000/redoc`
+## Usage
 
-### 3. Execute a Flow
+The API exposes a set of endpoints for managing flows:
 
-```bash
-curl -X POST "http://localhost:8000/flow/execute-sync" \
-  -H "Content-Type: application/json" \
-  -d @sample_config.json
+- **`POST /flow/create`** - Create a new flow from a JSON configuration.
+- **`POST /flow/execute`** - Trigger asynchronous execution of a flow.
+- **`GET /flow/{execution_id}/status`** - Get the status and results of an ongoing or completed flow execution.
+- **`DELETE /flow/{execution_id}`** - Delete a flow execution and related data.
+- **`GET /health`** - Health check endpoint.
+
+Example of a flow JSON config payload is documented in the API docs and includes tasks, conditions, and start task information.
+
+---
+
+## Docker Usage
+
+For simplified deployment, you can use Docker.
+
+Build the Docker image:
+
+```
+docker build -t flow-manager 
 ```
 
-### 4. Run Tests
-
-```bash
-python test_flow_manager.py
+Run the container:
+```
+Run the container:
 ```
 
-## 🎯 Flow Design Explanation
+Access the API at `http://localhost:8000`.
 
-### How Tasks Depend on Each Other
+---
 
-Tasks in the flow manager system have a **sequential dependency** structure:
+## Project Structure
 
-1. **Linear Execution**: Tasks execute one after another, never in parallel
-2. **Data Flow**: Each task can access results from previously completed tasks
-3. **Conditional Dependencies**: The next task to execute depends on the current task's result
-4. **Context Sharing**: Task results are passed through a shared context object
+- `api.py` - FastAPI application defining API endpoints.
+- `flow_manager.py` - Core logic for loading flows, managing executions, and task orchestration.
+- `models.py` - Enum definitions and data models for tasks and flow statuses.
+- `test_flow_manager.py` - Async test script validating main flow execution and API integration.
+- `Dockerfile` - Containerization instructions.
+- `requirements.txt` - Python dependencies list.
 
-### Task Success/Failure Evaluation
+---
 
-Each task execution is evaluated based on:
+## Contribution
 
-1. **Task Result Status**: 
-   - `SUCCESS`: Task completed without errors
-   - `FAILURE`: Task encountered an error or failed validation
-   - `SKIPPED`: Task was not executed due to flow conditions
+Contributions and suggestions are welcome! Please open issues or pull requests as needed.
 
-2. **Evaluation Criteria**:
-   - Exception handling during task execution
-   - Return value validation  
-   - Custom business logic checks
-   - Resource availability and constraints
+---
 
-### What Happens on Success/Failure
+## Future Enhancements
 
-#### On Task Success:
-1. Store task result in execution context
-2. Evaluate associated condition for the task
-3. Determine next task based on condition configuration
-4. Continue to next task or end flow if no more tasks
+- Persistent storage for flow and execution data.
+- User authentication and authorization for API endpoints.
+- A web UI dashboard for visual flow composition and monitoring.
+- Integration with message queues or external triggers.
 
-#### On Task Failure:
-1. Store error details and failure status
-2. Evaluate failure condition (if defined)
-3. Either:
-   - End the flow immediately (default behavior)
-   - Route to error handling task
-   - Retry the failed task (if configured)
+---
 
-## 📚 API Documentation
-
-### Key Endpoints
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/` | API information and endpoint list |
-| GET | `/health` | Health check |
-| POST | `/flow/create` | Create a new flow from configuration |
-| POST | `/flow/execute` | Execute a flow asynchronously |
-| POST | `/flow/execute-sync` | Execute a flow synchronously |
-| GET | `/flow/{id}/status` | Get flow execution status |
-| GET | `/flows` | List all flows |
-| GET | `/flows/summary` | Get flow summary statistics |
-
-## 📖 Usage Examples
-
-### Basic Flow Configuration
-
-```json
-{
-  "flow": {
-    "id": "data_processing_flow",
-    "name": "Data Processing Pipeline", 
-    "start_task": "task1",
-    "tasks": [
-      {
-        "name": "task1",
-        "description": "Fetch data from external API",
-        "task_type": "fetch_data"
-      },
-      {
-        "name": "task2", 
-        "description": "Process and transform data",
-        "task_type": "process_data"
-      },
-      {
-        "name": "task3",
-        "description": "Store processed data",
-        "task_type": "store_data"
-      }
-    ],
-    "conditions": [
-      {
-        "name": "fetch_condition",
-        "description": "Continue to processing if fetch succeeds",
-        "source_task": "task1",
-        "outcome": "success",
-        "target_task_success": "task2",
-        "target_task_failure": "end"
-      }
-    ]
-  }
-}
-```
-
-### Python API Usage
-
-```python
-import asyncio
-from flow_manager import FlowManager
-
-async def example_usage():
-    # Initialize flow manager
-    manager = FlowManager()
-
-    # Load configuration from JSON
-    flow_config = manager.load_flow_config(config_dict)
-
-    # Create and execute flow
-    execution_id = manager.create_flow_execution(flow_config)
-    result = await manager.execute_flow(execution_id, flow_config)
-
-    print(f"Flow completed with status: {result.status}")
-
-asyncio.run(example_usage())
-```
-
-## 🧪 Testing
-
-Run the comprehensive test suite:
-
-```bash
-python test_flow_manager.py
-```
-
-This will test:
-- Core flow manager functionality
-- Task execution and condition evaluation
-- Error handling and failure scenarios
-- API integration (if server is running)
-
-## 🚀 Extending the System
-
-### Adding New Task Types
-
-1. Create a new task class inheriting from `BaseTask`:
-
-```python
-from models import BaseTask, TaskResult, TaskStatus
-
-class CustomTask(BaseTask):
-    async def execute(self, context: Dict[str, Any] = None) -> TaskResult:
-        # Implement your task logic
-        return TaskResult(
-            task_name=self.name,
-            status=TaskStatus.SUCCESS,
-            message="Custom task completed"
-        )
-```
-
-2. Register the task in the TaskFactory:
-
-```python
-from flow_manager import TaskFactory
-TaskFactory.register_task('custom_task', CustomTask)
-```
-
-## 🔧 Configuration
-
-Tasks can be configured with custom parameters:
-
-```json
-{
-  "name": "fetch_data",
-  "description": "Fetch data with custom settings",
-  "task_type": "fetch_data",
-  "parameters": {
-    "data_source": "https://api.example.com/data",
-    "timeout": 30,
-    "retry_count": 3,
-    "failure_rate": 0.1
-  }
-}
-```
-
-## 📊 Monitoring and Observability
-
-The system provides built-in monitoring capabilities:
-
-- **Real-time Status**: Track flow execution progress
-- **Task Metrics**: Execution time, success/failure rates  
-- **Error Tracking**: Detailed error messages and stack traces
-- **Flow History**: Complete audit trail of all executions
-
-Access monitoring through the API:
-- `GET /flows/summary` - Overall system statistics
-- `GET /flow/{id}/status` - Individual flow status
-- `GET /flow/{id}/tasks/{name}/result` - Specific task results
-
-## 📄 Implementation Details
-
-### Code Implementation
-
-The system consists of four main Python modules:
-
-1. **`models.py`**: Defines data structures, enums, and base classes
-2. **`tasks.py`**: Contains concrete task implementations (Fetch, Process, Store)
-3. **`flow_manager.py`**: Core orchestration engine with TaskFactory and ConditionEvaluator
-4. **`api.py`**: FastAPI microservice providing RESTful endpoints
-
-### Example Tasks
-
-The system includes three example tasks:
-
-- **FetchDataTask**: Simulates fetching data from external sources
-- **ProcessDataTask**: Transforms and processes data from previous tasks
-- **StoreDataTask**: Stores processed data to a destination
-
-Each task can be configured with parameters like failure rates for testing different scenarios.
 
