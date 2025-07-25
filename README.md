@@ -1,6 +1,6 @@
 # Python Backend Flow Manager System
 
-A robust microservice for managing sequential task execution with conditional flow control, built with FastAPI and Python.
+A microservice for managing sequential task execution with conditional flow control, built with FastAPI and Python.
 
 ## 🚀 Features
 
