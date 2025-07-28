@@ -1,1 +1,22 @@
 docker-desktop-amd64.deb
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environment
+venv/
+.env
+
+# Editor directories
+.vscode/
+.idea/
+
+# Other OS files
+.DS_Store
+Thumbs.db
+
+# Optional but recommended to avoid committing local settings
+*.log
+*.sqlite3
+
