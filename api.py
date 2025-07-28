@@ -89,7 +89,8 @@ async def health_check():
 @app.post("/flow/create", response_model=Dict[str, str])
 async def create_flow(flow_config: FlowConfig):
     try:
-        flow_obj = flow_manager.load_flow_config(flow_config.dict())
+        # Changed from .dict() to .model_dump() here
+        flow_obj = flow_manager.load_flow_config(flow_config.model_dump())
         execution_id = flow_manager.create_flow_execution(flow_obj)
         return {
             "execution_id": execution_id,
