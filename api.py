@@ -8,13 +8,12 @@ import asyncio
 from flow_manager import FlowManager, FlowExecutionState, TaskStatus, FlowStatus
 
 
-# Define your request and response models
-
 class TaskConfig(BaseModel):
     name: str
     description: Optional[str] = None
     task_type: str
     parameters: Dict[str, Any] = {}
+
 
 class ConditionConfig(BaseModel):
     name: str
@@ -24,6 +23,7 @@ class ConditionConfig(BaseModel):
     target_task_success: str
     target_task_failure: str
 
+
 class FlowConfig(BaseModel):
     id: str
     name: str
@@ -31,8 +31,10 @@ class FlowConfig(BaseModel):
     tasks: List[TaskConfig]
     conditions: List[ConditionConfig]
 
+
 class FlowExecutionRequest(BaseModel):
     execution_id: str = Field(..., description="Flow execution ID")
+
 
 class FlowExecutionResponse(BaseModel):
     execution_id: str
@@ -43,6 +45,7 @@ class FlowExecutionResponse(BaseModel):
     started_at: Optional[datetime] = None
     ended_at: Optional[datetime] = None
     task_results: Dict[str, Dict[str, Any]] = {}
+
 
 app = FastAPI(title="Flow Manager API")
 
@@ -72,15 +75,16 @@ def serialize_execution_state(state: FlowExecutionState) -> FlowExecutionRespons
         task_results=task_results,
     )
 
+
 @app.get("/")
 async def root():
-    return {
-        "message": "Flow Manager API is running"
-    }
+    return {"message": "Flow Manager API is running"}
+
 
 @app.get("/health")
 async def health_check():
     return {"status": "healthy", "timestamp": datetime.utcnow()}
+
 
 @app.post("/flow/create", response_model=Dict[str, str])
 async def create_flow(flow_config: FlowConfig):
@@ -95,6 +99,7 @@ async def create_flow(flow_config: FlowConfig):
         }
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Failed to create flow: {str(e)}")
+
 
 @app.post("/flow/execute", response_model=FlowExecutionResponse)
 async def execute_flow_async(background_tasks: BackgroundTasks, request: FlowExecutionRequest):
@@ -113,12 +118,14 @@ async def execute_flow_async(background_tasks: BackgroundTasks, request: FlowExe
     background_tasks.add_task(run_execution)
     return serialize_execution_state(execution_state)
 
+
 @app.get("/flow/{execution_id}/status", response_model=FlowExecutionResponse)
 async def get_flow_status(execution_id: str):
     execution_state = flow_manager.get_flow_status(execution_id)
     if not execution_state:
         raise HTTPException(status_code=404, detail=f"Flow execution {execution_id} not found")
     return serialize_execution_state(execution_state)
+
 
 @app.delete("/flow/{execution_id}")
 async def delete_flow(execution_id: str):
@@ -127,15 +134,13 @@ async def delete_flow(execution_id: str):
         raise HTTPException(status_code=404, detail=f"Flow execution {execution_id} not found")
     return {"message": f"Flow execution {execution_id} deleted successfully"}
 
-# Additional error handlers if required
+
 @app.exception_handler(Exception)
 async def general_exception_handler(request, exc):
     return JSONResponse(status_code=500, content={"message": str(exc)})
 
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000, log_level="info")
-<<<<<<< HEAD
-=======
 
->>>>>>> 2a487aa (Docker container created)
